@@ -1,0 +1,70 @@
+spring:
+  application:
+    name: twitter
+  
+  data:
+    mongodb:
+      auto-index-creation: true
+    
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+  
+  cache:
+    type: redis
+    cache-names: posts,users,comments,likes,userPosts,followingPosts
+    redis:
+      time-to-live: 3600000  # 1 hour in milliseconds
+
+  actuator:
+    endpoints:
+      web:
+        exposure:
+          include: health,info,metrics,prometheus,env,loggers
+        base-path: /actuator
+    endpoint:
+      health:
+        show-details: when-authorized
+        probes:
+          enabled: true
+      metrics:
+        enabled: true
+      prometheus:
+        enabled: true
+    metrics:
+      export:
+        prometheus:
+          enabled: true
+      tags:
+        application: ${spring.application.name}
+        environment: ${spring.profiles.active:default}
+      distribution:
+        percentiles-histogram:
+          http.server.requests: true
+        percentiles:
+          http.server.requests: 0.5, 0.9, 0.95, 0.99
+      web:
+        server:
+          auto-time-requests: true
+  mongodb:
+    username: username
+    authentication-database: admin
+    database: twitter
+    password: password
+    port: 27017
+    host: localhost
+
+server:
+  port: 8080
+
+jwt:
+  expiration: 600000
+  secret: 6415f55b0f7449fdd1148a10d9ca4581b49638948b2b667c03a473e13f2aa4b94ff53f5b306c1ca09630373649f357de7a2db24874065513489f5b721629e719
+
