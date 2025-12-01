@@ -6,11 +6,13 @@ import jakarta.servlet.ServletException
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import koval.proxyseller.twitter.exception.AuthenticationException
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 
+import java.util.Arrays
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -19,17 +21,23 @@ import java.util.concurrent.atomic.AtomicInteger
 @Order(-2147483644) // HIGHEST_PRECEDENCE + 4
 class RateLimitingFilter extends OncePerRequestFilter {
 
-    private static final int MAX_REQUESTS_PER_MINUTE = 100
-    private static final int MAX_REQUESTS_PER_HOUR = 1000
+    @Value('${rate-limiting.max-requests-per-minute:100}')
+    private int maxRequestsPerMinute
+
+    @Value('${rate-limiting.max-requests-per-hour:1000}')
+    private int maxRequestsPerHour
+
     private static final long MINUTE_WINDOW = 60 * 1000 // 1 minute
     private static final long HOUR_WINDOW = 60 * 60 * 1000 // 1 hour
 
     private final Map<String, RequestCounter> requestCounters = new ConcurrentHashMap<>()
 
-    private static final List<String> EXCLUDED_PATHS = [
-            "/actuator/health",
-            "/actuator/info"
-    ]
+    @Value('${rate-limiting.excluded-paths:/actuator/health,/actuator/info}')
+    private String excludedPathsString
+
+    private List<String> getExcludedPaths() {
+        return Arrays.asList(excludedPathsString.split(","))
+    }
 
     @Override
     protected void doFilterInternal(
@@ -42,10 +50,10 @@ class RateLimitingFilter extends OncePerRequestFilter {
             RequestCounter counter = requestCounters.computeIfAbsent(clientId, { new RequestCounter() })
 
             // Check minute limit
-            if (counter.getMinuteCount() >= MAX_REQUESTS_PER_MINUTE) {
+            if (counter.getMinuteCount() >= maxRequestsPerMinute) {
                 log.warn("Rate limit exceeded (per minute) - Client: ${clientId} | IP: ${getClientIp(request)}")
                 response.setStatus(HttpServletResponse.SC_TOO_MANY_REQUESTS)
-                response.setHeader("X-RateLimit-Limit", String.valueOf(MAX_REQUESTS_PER_MINUTE))
+                response.setHeader("X-RateLimit-Limit", String.valueOf(maxRequestsPerMinute))
                 response.setHeader("X-RateLimit-Remaining", "0")
                 response.setHeader("Retry-After", "60")
                 response.getWriter().write("{\"error\":\"Rate limit exceeded. Please try again later.\"}")
@@ -53,10 +61,10 @@ class RateLimitingFilter extends OncePerRequestFilter {
             }
 
             // Check hour limit
-            if (counter.getHourCount() >= MAX_REQUESTS_PER_HOUR) {
+            if (counter.getHourCount() >= maxRequestsPerHour) {
                 log.warn("Rate limit exceeded (per hour) - Client: ${clientId} | IP: ${getClientIp(request)}")
                 response.setStatus(HttpServletResponse.SC_TOO_MANY_REQUESTS)
-                response.setHeader("X-RateLimit-Limit", String.valueOf(MAX_REQUESTS_PER_HOUR))
+                response.setHeader("X-RateLimit-Limit", String.valueOf(maxRequestsPerHour))
                 response.setHeader("X-RateLimit-Remaining", "0")
                 response.setHeader("Retry-After", "3600")
                 response.getWriter().write("{\"error\":\"Rate limit exceeded. Please try again later.\"}")
@@ -67,10 +75,10 @@ class RateLimitingFilter extends OncePerRequestFilter {
             counter.increment()
 
             // Set rate limit headers
-            response.setHeader("X-RateLimit-Limit-Minute", String.valueOf(MAX_REQUESTS_PER_MINUTE))
-            response.setHeader("X-RateLimit-Remaining-Minute", String.valueOf(MAX_REQUESTS_PER_MINUTE - counter.getMinuteCount()))
-            response.setHeader("X-RateLimit-Limit-Hour", String.valueOf(MAX_REQUESTS_PER_HOUR))
-            response.setHeader("X-RateLimit-Remaining-Hour", String.valueOf(MAX_REQUESTS_PER_HOUR - counter.getHourCount()))
+            response.setHeader("X-RateLimit-Limit-Minute", String.valueOf(maxRequestsPerMinute))
+            response.setHeader("X-RateLimit-Remaining-Minute", String.valueOf(maxRequestsPerMinute - counter.getMinuteCount()))
+            response.setHeader("X-RateLimit-Limit-Hour", String.valueOf(maxRequestsPerHour))
+            response.setHeader("X-RateLimit-Remaining-Hour", String.valueOf(maxRequestsPerHour - counter.getHourCount()))
         }
 
         filterChain.doFilter(request, response)
@@ -78,7 +86,7 @@ class RateLimitingFilter extends OncePerRequestFilter {
 
     private boolean shouldApplyRateLimit(HttpServletRequest request) {
         String path = request.getRequestURI()
-        return !EXCLUDED_PATHS.any { path.startsWith(it) }
+        return !getExcludedPaths().any { path.startsWith(it.trim()) }
     }
 
     private String getClientId(HttpServletRequest request) {

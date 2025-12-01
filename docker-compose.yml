@@ -6,11 +6,11 @@ services:
     container_name: twitter-mongodb
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: username
-      MONGO_INITDB_ROOT_PASSWORD: password
-      MONGO_INITDB_DATABASE: twitter
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-username}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-password}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-twitter}
     ports:
-      - "27017:27017"
+      - "${MONGO_PORT:-27017}:27017"
     volumes:
       - mongodb_data:/data/db
     networks:
@@ -26,7 +26,8 @@ services:
     container_name: twitter-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
+    command: redis-server --appendonly yes ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}
     volumes:
       - redis_data:/data
     networks:
@@ -36,7 +37,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    command: redis-server --appendonly yes
 
   app:
     build:
@@ -45,12 +45,60 @@ services:
     container_name: twitter-app
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${SERVER_PORT:-8080}:${SERVER_PORT:-8080}"
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      MONGO_USERNAME: username
-      MONGO_PASSWORD: password
-      MONGO_DATABASE: twitter
+      MONGO_HOST: ${MONGO_HOST:-mongodb}
+      MONGO_PORT: ${MONGO_PORT:-27017}
+      MONGO_USERNAME: ${MONGO_USERNAME:-username}
+      MONGO_PASSWORD: ${MONGO_PASSWORD:-password}
+      MONGO_DATABASE: ${MONGO_DATABASE:-twitter}
+      MONGO_AUTH_DATABASE: ${MONGO_AUTH_DATABASE:-admin}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_TIMEOUT: ${REDIS_TIMEOUT:-2000ms}
+      REDIS_POOL_MAX_ACTIVE: ${REDIS_POOL_MAX_ACTIVE:-8}
+      REDIS_POOL_MAX_IDLE: ${REDIS_POOL_MAX_IDLE:-8}
+      REDIS_POOL_MIN_IDLE: ${REDIS_POOL_MIN_IDLE:-0}
+      SERVER_PORT: ${SERVER_PORT:-8080}
+      JWT_SECRET: ${JWT_SECRET:-}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-600000}
+      CACHE_TTL: ${CACHE_TTL:-3600000}
+      CACHE_NAMES: ${CACHE_NAMES:-posts,users,comments,likes,userPosts,followingPosts}
+      CACHE_DEFAULT_TTL: ${CACHE_DEFAULT_TTL:-600}
+      CACHE_POSTS_TTL: ${CACHE_POSTS_TTL:-10}
+      CACHE_USERS_TTL: ${CACHE_USERS_TTL:-15}
+      CACHE_COMMENTS_TTL: ${CACHE_COMMENTS_TTL:-5}
+      CACHE_LIKES_TTL: ${CACHE_LIKES_TTL:-5}
+      CACHE_USER_POSTS_TTL: ${CACHE_USER_POSTS_TTL:-10}
+      CACHE_FOLLOWING_POSTS_TTL: ${CACHE_FOLLOWING_POSTS_TTL:-5}
+      CIRCUIT_BREAKER_SLIDING_WINDOW_SIZE: ${CIRCUIT_BREAKER_SLIDING_WINDOW_SIZE:-10}
+      CIRCUIT_BREAKER_FAILURE_RATE_THRESHOLD: ${CIRCUIT_BREAKER_FAILURE_RATE_THRESHOLD:-50.0}
+      CIRCUIT_BREAKER_WAIT_DURATION: ${CIRCUIT_BREAKER_WAIT_DURATION:-30}
+      CIRCUIT_BREAKER_PERMITTED_CALLS_HALF_OPEN: ${CIRCUIT_BREAKER_PERMITTED_CALLS_HALF_OPEN:-3}
+      CIRCUIT_BREAKER_SLOW_CALL_RATE_THRESHOLD: ${CIRCUIT_BREAKER_SLOW_CALL_RATE_THRESHOLD:-50.0}
+      CIRCUIT_BREAKER_SLOW_CALL_DURATION: ${CIRCUIT_BREAKER_SLOW_CALL_DURATION:-2}
+      BCRYPT_STRENGTH: ${BCRYPT_STRENGTH:-12}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8080,http://127.0.0.1:3000,http://127.0.0.1:8080}
+      CORS_ALLOWED_METHODS: ${CORS_ALLOWED_METHODS:-GET,POST,PUT,PATCH,DELETE,OPTIONS}
+      CORS_ALLOWED_HEADERS: ${CORS_ALLOWED_HEADERS:-*}
+      CORS_EXPOSED_HEADERS: ${CORS_EXPOSED_HEADERS:-X-Request-ID,X-Response-Time,X-Memory-Used,X-RateLimit-Limit-Minute,X-RateLimit-Remaining-Minute,X-RateLimit-Limit-Hour,X-RateLimit-Remaining-Hour}
+      CORS_ALLOW_CREDENTIALS: ${CORS_ALLOW_CREDENTIALS:-true}
+      CORS_MAX_AGE: ${CORS_MAX_AGE:-3600}
+      SECURITY_PUBLIC_ENDPOINTS: ${SECURITY_PUBLIC_ENDPOINTS:-/api/v1/auth/**,/api/error,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**,/actuator/health,/actuator/info,/actuator/prometheus}
+      RATE_LIMIT_MAX_REQUESTS_PER_MINUTE: ${RATE_LIMIT_MAX_REQUESTS_PER_MINUTE:-100}
+      RATE_LIMIT_MAX_REQUESTS_PER_HOUR: ${RATE_LIMIT_MAX_REQUESTS_PER_HOUR:-1000}
+      RATE_LIMIT_EXCLUDED_PATHS: ${RATE_LIMIT_EXCLUDED_PATHS:-/actuator/health,/actuator/info}
+      PERFORMANCE_SLOW_REQUEST_THRESHOLD: ${PERFORMANCE_SLOW_REQUEST_THRESHOLD:-1000}
+      PERFORMANCE_VERY_SLOW_REQUEST_THRESHOLD: ${PERFORMANCE_VERY_SLOW_REQUEST_THRESHOLD:-5000}
+      OPENAPI_TITLE: ${OPENAPI_TITLE:-Twitter API}
+      OPENAPI_VERSION: ${OPENAPI_VERSION:-1.0.0}
+      OPENAPI_DESCRIPTION: ${OPENAPI_DESCRIPTION:-RESTful API for Twitter-like social media application}
+      OPENAPI_CONTACT_NAME: ${OPENAPI_CONTACT_NAME:-API Support}
+      OPENAPI_CONTACT_EMAIL: ${OPENAPI_CONTACT_EMAIL:-support@twitter.com}
+      OPENAPI_LICENSE_NAME: ${OPENAPI_LICENSE_NAME:-Apache 2.0}
+      OPENAPI_LICENSE_URL: ${OPENAPI_LICENSE_URL:-https://www.apache.org/licenses/LICENSE-2.0.html}
     depends_on:
       mongodb:
         condition: service_healthy

@@ -5,23 +5,29 @@ spring:
   data:
     mongodb:
       auto-index-creation: true
+      host: ${MONGO_HOST:localhost}
+      port: ${MONGO_PORT:27017}
+      username: ${MONGO_USERNAME:username}
+      password: ${MONGO_PASSWORD:password}
+      database: ${MONGO_DATABASE:twitter}
+      authentication-database: ${MONGO_AUTH_DATABASE:admin}
     
     redis:
-      host: localhost
-      port: 6379
-      password:
-      timeout: 2000ms
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: ${REDIS_TIMEOUT:2000ms}
       lettuce:
         pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
+          max-active: ${REDIS_POOL_MAX_ACTIVE:8}
+          max-idle: ${REDIS_POOL_MAX_IDLE:8}
+          min-idle: ${REDIS_POOL_MIN_IDLE:0}
   
   cache:
     type: redis
-    cache-names: posts,users,comments,likes,userPosts,followingPosts
+    cache-names: ${CACHE_NAMES:posts,users,comments,likes,userPosts,followingPosts}
     redis:
-      time-to-live: 3600000  # 1 hour in milliseconds
+      time-to-live: ${CACHE_TTL:3600000}  # 1 hour in milliseconds
 
   actuator:
     endpoints:
@@ -53,18 +59,66 @@ spring:
       web:
         server:
           auto-time-requests: true
-  mongodb:
-    username: username
-    authentication-database: admin
-    database: twitter
-    password: password
-    port: 27017
-    host: localhost
 
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 jwt:
-  expiration: 600000
-  secret: 6415f55b0f7449fdd1148a10d9ca4581b49638948b2b667c03a473e13f2aa4b94ff53f5b306c1ca09630373649f357de7a2db24874065513489f5b721629e719
+  expiration: ${JWT_EXPIRATION:600000}
+  secret: ${JWT_SECRET:6415f55b0f7449fdd1148a10d9ca4581b49638948b2b667c03a473e13f2aa4b94ff53f5b306c1ca09630373649f357de7a2db24874065513489f5b721629e719}
+
+# Cache Configuration
+cache:
+  default-ttl: ${CACHE_DEFAULT_TTL:600}  # minutes
+  posts-ttl: ${CACHE_POSTS_TTL:10}  # minutes
+  users-ttl: ${CACHE_USERS_TTL:15}  # minutes
+  comments-ttl: ${CACHE_COMMENTS_TTL:5}  # minutes
+  likes-ttl: ${CACHE_LIKES_TTL:5}  # minutes
+  user-posts-ttl: ${CACHE_USER_POSTS_TTL:10}  # minutes
+  following-posts-ttl: ${CACHE_FOLLOWING_POSTS_TTL:5}  # minutes
+
+# Circuit Breaker Configuration
+circuit-breaker:
+  sliding-window-size: ${CIRCUIT_BREAKER_SLIDING_WINDOW_SIZE:10}
+  failure-rate-threshold: ${CIRCUIT_BREAKER_FAILURE_RATE_THRESHOLD:50.0}
+  wait-duration-in-open-state: ${CIRCUIT_BREAKER_WAIT_DURATION:30}  # seconds
+  permitted-number-of-calls-in-half-open-state: ${CIRCUIT_BREAKER_PERMITTED_CALLS_HALF_OPEN:3}
+  slow-call-rate-threshold: ${CIRCUIT_BREAKER_SLOW_CALL_RATE_THRESHOLD:50.0}
+  slow-call-duration-threshold: ${CIRCUIT_BREAKER_SLOW_CALL_DURATION:2}  # seconds
+
+# Security Configuration
+security:
+  password-encoder:
+    bcrypt-strength: ${BCRYPT_STRENGTH:12}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080,http://127.0.0.1:3000,http://127.0.0.1:8080}
+    allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,PATCH,DELETE,OPTIONS}
+    allowed-headers: ${CORS_ALLOWED_HEADERS:*}
+    exposed-headers: ${CORS_EXPOSED_HEADERS:X-Request-ID,X-Response-Time,X-Memory-Used,X-RateLimit-Limit-Minute,X-RateLimit-Remaining-Minute,X-RateLimit-Limit-Hour,X-RateLimit-Remaining-Hour}
+    allow-credentials: ${CORS_ALLOW_CREDENTIALS:true}
+    max-age: ${CORS_MAX_AGE:3600}  # seconds
+  public-endpoints: ${SECURITY_PUBLIC_ENDPOINTS:/api/v1/auth/**,/api/error,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**,/actuator/health,/actuator/info,/actuator/prometheus}
+
+# Rate Limiting Configuration
+rate-limiting:
+  max-requests-per-minute: ${RATE_LIMIT_MAX_REQUESTS_PER_MINUTE:100}
+  max-requests-per-hour: ${RATE_LIMIT_MAX_REQUESTS_PER_HOUR:1000}
+  excluded-paths: ${RATE_LIMIT_EXCLUDED_PATHS:/actuator/health,/actuator/info}
+
+# Performance Monitoring Configuration
+performance:
+  slow-request-threshold: ${PERFORMANCE_SLOW_REQUEST_THRESHOLD:1000}  # milliseconds
+  very-slow-request-threshold: ${PERFORMANCE_VERY_SLOW_REQUEST_THRESHOLD:5000}  # milliseconds
+
+# OpenAPI Configuration
+openapi:
+  title: ${OPENAPI_TITLE:Twitter API}
+  version: ${OPENAPI_VERSION:1.0.0}
+  description: ${OPENAPI_DESCRIPTION:RESTful API for Twitter-like social media application}
+  contact:
+    name: ${OPENAPI_CONTACT_NAME:API Support}
+    email: ${OPENAPI_CONTACT_EMAIL:support@twitter.com}
+  license:
+    name: ${OPENAPI_LICENSE_NAME:Apache 2.0}
+    url: ${OPENAPI_LICENSE_URL:https://www.apache.org/licenses/LICENSE-2.0.html}
 

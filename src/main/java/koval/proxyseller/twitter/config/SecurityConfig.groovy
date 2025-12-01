@@ -3,6 +3,7 @@ package koval.proxyseller.twitter.config
 import jakarta.servlet.http.HttpServletResponse
 import koval.proxyseller.twitter.security.JwtAuthenticationFilter
 import koval.proxyseller.twitter.security.filter.*
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.authentication.AuthenticationManager
@@ -34,6 +35,30 @@ class SecurityConfig {
     private final PerformanceMonitoringFilter performanceMonitoringFilter
     private final RateLimitingFilter rateLimitingFilter
 
+    @Value('${security.password-encoder.bcrypt-strength:12}')
+    private int bcryptStrength
+
+    @Value('${security.cors.allowed-origins:http://localhost:3000,http://localhost:8080,http://127.0.0.1:3000,http://127.0.0.1:8080}')
+    private String allowedOrigins
+
+    @Value('${security.cors.allowed-methods:GET,POST,PUT,PATCH,DELETE,OPTIONS}')
+    private String allowedMethods
+
+    @Value('${security.cors.allowed-headers:*}')
+    private String allowedHeaders
+
+    @Value('${security.cors.exposed-headers:X-Request-ID,X-Response-Time,X-Memory-Used,X-RateLimit-Limit-Minute,X-RateLimit-Remaining-Minute,X-RateLimit-Limit-Hour,X-RateLimit-Remaining-Hour}')
+    private String exposedHeaders
+
+    @Value('${security.cors.allow-credentials:true}')
+    private boolean allowCredentials
+
+    @Value('${security.cors.max-age:3600}')
+    private long maxAge
+
+    @Value('${security.public-endpoints:/api/v1/auth/**,/api/error,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**,/actuator/health,/actuator/info,/actuator/prometheus}')
+    private String publicEndpoints
+
     SecurityConfig(
             UserDetailsService userDetailsService,
             JwtAuthenticationFilter jwtAuthenticationFilter,
@@ -53,26 +78,18 @@ class SecurityConfig {
 
     @Bean
     PasswordEncoder getPasswordEncoder() {
-        return new BCryptPasswordEncoder(12)
+        return new BCryptPasswordEncoder(bcryptStrength)
     }
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        String[] publicPaths = publicEndpoints.split(",")
         return http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/v1/auth/**",
-                                "/api/error",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/v3/api-docs/**",
-                                "/actuator/health",
-                                "/actuator/info",
-                                "/actuator/prometheus"
-                        )
+                        .requestMatchers(publicPaths)
                         .permitAll()
                         .anyRequest()
                         .authenticated()
@@ -102,25 +119,12 @@ class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration()
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:3000",
-                "http://localhost:8080",
-                "http://127.0.0.1:3000",
-                "http://127.0.0.1:8080"
-        ))
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"))
-        configuration.setAllowedHeaders(Arrays.asList("*"))
-        configuration.setExposedHeaders(Arrays.asList(
-                "X-Request-ID",
-                "X-Response-Time",
-                "X-Memory-Used",
-                "X-RateLimit-Limit-Minute",
-                "X-RateLimit-Remaining-Minute",
-                "X-RateLimit-Limit-Hour",
-                "X-RateLimit-Remaining-Hour"
-        ))
-        configuration.setAllowCredentials(true)
-        configuration.setMaxAge(3600L)
+        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")))
+        configuration.setAllowedMethods(Arrays.asList(allowedMethods.split(",")))
+        configuration.setAllowedHeaders(Arrays.asList(allowedHeaders.split(",")))
+        configuration.setExposedHeaders(Arrays.asList(exposedHeaders.split(",")))
+        configuration.setAllowCredentials(allowCredentials)
+        configuration.setMaxAge(maxAge)
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource()
         source.registerCorsConfiguration("/**", configuration)

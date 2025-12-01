@@ -5,6 +5,7 @@ import jakarta.servlet.FilterChain
 import jakarta.servlet.ServletException
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Component
@@ -15,8 +16,11 @@ import org.springframework.web.filter.OncePerRequestFilter
 @Order(-2147483645) // HIGHEST_PRECEDENCE + 3
 class PerformanceMonitoringFilter extends OncePerRequestFilter {
 
-    private static final long SLOW_REQUEST_THRESHOLD = 1000 // 1 second
-    private static final long VERY_SLOW_REQUEST_THRESHOLD = 5000 // 5 seconds
+    @Value('${performance.slow-request-threshold:1000}')
+    private long slowRequestThreshold
+
+    @Value('${performance.very-slow-request-threshold:5000}')
+    private long verySlowRequestThreshold
 
     @Override
     protected void doFilterInternal(
@@ -43,10 +47,10 @@ class PerformanceMonitoringFilter extends OncePerRequestFilter {
             response.setHeader("X-Memory-Used", "${memoryUsed / 1024}KB")
 
             // Log performance metrics
-            if (duration > VERY_SLOW_REQUEST_THRESHOLD) {
+            if (duration > verySlowRequestThreshold) {
                 log.error("Performance Alert - VERY_SLOW_REQUEST | RequestID: ${requestId} | " +
                         "Method: ${method} | URI: ${uri} | Duration: ${duration}ms | Memory: ${memoryUsed / 1024}KB")
-            } else if (duration > SLOW_REQUEST_THRESHOLD) {
+            } else if (duration > slowRequestThreshold) {
                 log.warn("Performance Alert - SLOW_REQUEST | RequestID: ${requestId} | " +
                         "Method: ${method} | URI: ${uri} | Duration: ${duration}ms | Memory: ${memoryUsed / 1024}KB")
             } else if (log.isDebugEnabled()) {

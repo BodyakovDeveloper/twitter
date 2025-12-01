@@ -94,10 +94,17 @@ A RESTful API for a Twitter-like social media platform built with Spring Boot, f
 
 3. **Configure the application**
    
-   Update `src/main/resources/application.yml` if needed:
-   - MongoDB connection settings
-   - Redis connection settings
-   - JWT secret (for production, use a secure secret)
+   Create a `.env` file in the project root (optional, defaults are provided):
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration values
+   ```
+   
+   Or set environment variables directly:
+   - MongoDB: `MONGO_HOST`, `MONGO_PORT`, `MONGO_USERNAME`, `MONGO_PASSWORD`, `MONGO_DATABASE`
+   - Redis: `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`
+   - JWT: `JWT_SECRET` (required for production)
+   - Server: `SERVER_PORT`
 
 4. **Build the project**
    ```bash
@@ -259,11 +266,83 @@ Key configuration options in `application.yml`:
 
 ### Environment Variables
 
-For Docker deployment, you can override:
-- `MONGO_USERNAME`: MongoDB username
-- `MONGO_PASSWORD`: MongoDB password
-- `MONGO_DATABASE`: MongoDB database name
-- `SPRING_PROFILES_ACTIVE`: Active Spring profile (default: `docker`)
+All configuration values can be overridden via environment variables. Create a `.env` file or set them in your environment:
+
+**MongoDB Configuration:**
+- `MONGO_HOST`: MongoDB host (default: `localhost`)
+- `MONGO_PORT`: MongoDB port (default: `27017`)
+- `MONGO_USERNAME`: MongoDB username (default: `username`)
+- `MONGO_PASSWORD`: MongoDB password (default: `password`)
+- `MONGO_DATABASE`: MongoDB database name (default: `twitter`)
+- `MONGO_AUTH_DATABASE`: MongoDB authentication database (default: `admin`)
+
+**Redis Configuration:**
+- `REDIS_HOST`: Redis host (default: `localhost`)
+- `REDIS_PORT`: Redis port (default: `6379`)
+- `REDIS_PASSWORD`: Redis password (default: empty)
+- `REDIS_TIMEOUT`: Redis connection timeout (default: `2000ms`)
+- `REDIS_POOL_MAX_ACTIVE`: Redis pool max active connections (default: `8`)
+- `REDIS_POOL_MAX_IDLE`: Redis pool max idle connections (default: `8`)
+- `REDIS_POOL_MIN_IDLE`: Redis pool min idle connections (default: `0`)
+
+**Server Configuration:**
+- `SERVER_PORT`: Application server port (default: `8080`)
+
+**JWT Configuration:**
+- `JWT_SECRET`: JWT secret key (⚠️ **REQUIRED** for production - must be at least 256 bits)
+- `JWT_EXPIRATION`: JWT token expiration in milliseconds (default: `600000` = 10 minutes)
+
+**Cache Configuration:**
+- `CACHE_TTL`: Cache time-to-live in milliseconds (default: `3600000` = 1 hour)
+- `CACHE_NAMES`: Comma-separated cache names (default: `posts,users,comments,likes,userPosts,followingPosts`)
+- `CACHE_DEFAULT_TTL`: Default cache TTL in minutes (default: `600`)
+- `CACHE_POSTS_TTL`: Posts cache TTL in minutes (default: `10`)
+- `CACHE_USERS_TTL`: Users cache TTL in minutes (default: `15`)
+- `CACHE_COMMENTS_TTL`: Comments cache TTL in minutes (default: `5`)
+- `CACHE_LIKES_TTL`: Likes cache TTL in minutes (default: `5`)
+- `CACHE_USER_POSTS_TTL`: User posts cache TTL in minutes (default: `10`)
+- `CACHE_FOLLOWING_POSTS_TTL`: Following posts cache TTL in minutes (default: `5`)
+
+**Circuit Breaker Configuration:**
+- `CIRCUIT_BREAKER_SLIDING_WINDOW_SIZE`: Sliding window size (default: `10`)
+- `CIRCUIT_BREAKER_FAILURE_RATE_THRESHOLD`: Failure rate threshold percentage (default: `50.0`)
+- `CIRCUIT_BREAKER_WAIT_DURATION`: Wait duration in open state in seconds (default: `30`)
+- `CIRCUIT_BREAKER_PERMITTED_CALLS_HALF_OPEN`: Permitted calls in half-open state (default: `3`)
+- `CIRCUIT_BREAKER_SLOW_CALL_RATE_THRESHOLD`: Slow call rate threshold percentage (default: `50.0`)
+- `CIRCUIT_BREAKER_SLOW_CALL_DURATION`: Slow call duration threshold in seconds (default: `2`)
+
+**Security Configuration:**
+- `BCRYPT_STRENGTH`: BCrypt password encoder strength (default: `12`)
+- `CORS_ALLOWED_ORIGINS`: Comma-separated allowed CORS origins (default: `http://localhost:3000,http://localhost:8080,http://127.0.0.1:3000,http://127.0.0.1:8080`)
+- `CORS_ALLOWED_METHODS`: Comma-separated allowed HTTP methods (default: `GET,POST,PUT,PATCH,DELETE,OPTIONS`)
+- `CORS_ALLOWED_HEADERS`: Comma-separated allowed headers (default: `*`)
+- `CORS_EXPOSED_HEADERS`: Comma-separated exposed headers (default: `X-Request-ID,X-Response-Time,X-Memory-Used,X-RateLimit-Limit-Minute,X-RateLimit-Remaining-Minute,X-RateLimit-Limit-Hour,X-RateLimit-Remaining-Hour`)
+- `CORS_ALLOW_CREDENTIALS`: Allow credentials in CORS (default: `true`)
+- `CORS_MAX_AGE`: CORS max age in seconds (default: `3600`)
+- `SECURITY_PUBLIC_ENDPOINTS`: Comma-separated public endpoints that don't require authentication
+
+**Rate Limiting Configuration:**
+- `RATE_LIMIT_MAX_REQUESTS_PER_MINUTE`: Maximum requests per minute per client (default: `100`)
+- `RATE_LIMIT_MAX_REQUESTS_PER_HOUR`: Maximum requests per hour per client (default: `1000`)
+- `RATE_LIMIT_EXCLUDED_PATHS`: Comma-separated paths excluded from rate limiting (default: `/actuator/health,/actuator/info`)
+
+**Performance Monitoring Configuration:**
+- `PERFORMANCE_SLOW_REQUEST_THRESHOLD`: Slow request threshold in milliseconds (default: `1000`)
+- `PERFORMANCE_VERY_SLOW_REQUEST_THRESHOLD`: Very slow request threshold in milliseconds (default: `5000`)
+
+**OpenAPI Configuration:**
+- `OPENAPI_TITLE`: API title (default: `Twitter API`)
+- `OPENAPI_VERSION`: API version (default: `1.0.0`)
+- `OPENAPI_DESCRIPTION`: API description
+- `OPENAPI_CONTACT_NAME`: Contact name (default: `API Support`)
+- `OPENAPI_CONTACT_EMAIL`: Contact email (default: `support@twitter.com`)
+- `OPENAPI_LICENSE_NAME`: License name (default: `Apache 2.0`)
+- `OPENAPI_LICENSE_URL`: License URL
+
+**Spring Profile:**
+- `SPRING_PROFILES_ACTIVE`: Active Spring profile (default: `default`, use `docker` for Docker deployment)
+
+> **Note**: For production, always set `JWT_SECRET` to a secure, randomly generated value. Never commit secrets to version control.
 
 ## Monitoring and Observability
 
